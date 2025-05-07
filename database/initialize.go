@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	dbName = "lazytask.db"
+	dbName = "jnda.db"
 )
 
 // DB represents the database connection
@@ -18,13 +18,11 @@ type DB struct {
 	*sql.DB
 }
 
+var database *DB
+
 // Initialize creates a new SQLite database and sets up the required tables
-func Initialize() (*DB, error) {
-	// Get user's home directory
-  db, err := GetDatabaseConnection()
-	if err != nil {
-		return nil, err
-	}
+func init_db(db *DB) error {
+  var err error
 
 	// Create tasks table
 	_, err = db.Exec(`
@@ -40,20 +38,24 @@ func Initialize() (*DB, error) {
 	`)
 	if err != nil {
 		log.Printf("Error creating tasks table: %v", err)
-		return nil, err
+		return err
 	}
 
-	return db, nil
+	return nil
 }
 
 func GetDatabaseConnection() (*DB, error) {
+  if database != nil {
+    return database, nil
+  }
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
 	}
 
-	// Create .lazytask directory if it doesn't exist
-	configDir := filepath.Join(homeDir, ".lazytask")
+	// Create .jnda directory if it doesn't exist
+	configDir := filepath.Join(homeDir, ".jnda")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return nil, err
 	}
@@ -64,6 +66,21 @@ func GetDatabaseConnection() (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
+  database = &DB{db} 
 
-  return &DB{db}, err
+  res, err := database.Query(`
+    SELECT name 
+    FROM sqlite_master 
+    WHERE type='table' AND name='tasks';
+  `)
+  if err != nil || res.Next() == false  {
+    log.Print("Init db")
+    err = init_db(database)
+    if err != nil {
+      log.Fatal("Failed to init database")
+    }
+  }
+  defer res.Close()
+
+	return database, err
 }

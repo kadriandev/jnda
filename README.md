@@ -1,3 +1,3 @@
-# Lazytask
+# Jnda
 
-A TUI interface for taskwarrior
+Your terminal based agenda and task manager
